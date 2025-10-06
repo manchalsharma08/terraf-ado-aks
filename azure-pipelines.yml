@@ -69,6 +69,10 @@ stages:
           command: 'init'
           workingDirectory: '$(System.DefaultWorkingDirectory)/terraf-infra'
           backendServiceArm: 'armazureserviceconnection'
+          backendAzureRmResourceGroupName: 'tera-rg'
+          backendAzureRmStorageAccountName: 'terastorage3567987'
+          backendAzureRmContainerName: 'teracon'
+          backendAzureRmKey: 'ram.terraform.tfsate'
       - task: TerraformTask@5
         inputs:
           provider: 'azurerm'
