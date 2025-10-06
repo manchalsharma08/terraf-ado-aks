@@ -66,6 +66,12 @@ stages:
       - task: TerraformTaskV2@2
         inputs:
           provider: 'azurerm'
+          command: 'init'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/terraf-infra'
+          backendServiceArm: 'armazureserviceconnection'
+      - task: TerraformTask@5
+        inputs:
+          provider: 'azurerm'
           command: 'apply'
           workingDirectory: '$(System.DefaultWorkingDirectory)/terraf-infra'
           commandOptions: '--auto-approve'
