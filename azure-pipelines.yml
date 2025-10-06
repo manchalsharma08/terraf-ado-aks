@@ -1,0 +1,78 @@
+trigger:
+  branches:
+    include:
+      - main   # Correct branch name
+
+pool: default  # Self Hosted AgentPool
+
+stages:
+# ===============================
+# Stage 1: Terraform Installation
+# ===============================
+- stage: terraformInstallation
+  displayName: "Install Terraform"
+  jobs:
+  - job: InstallationTerra
+    displayName: "Install Terraform Tool"
+    steps:
+      - task: TerraformInstaller@1
+        inputs:
+          terraformVersion: 'latest'
+
+# ===============================
+# Stage 2: Terraform Init & Plan
+# ===============================
+- stage: InitAndPlan
+  displayName: "Terraform Init, Validate & Plan"
+  dependsOn: terraformInstallation
+  jobs:
+  - job: PlanForInitAndPlan
+    displayName: "Run Terraform Commands"
+    steps:
+      - script: |
+          terraform init
+          terraform validate
+          terraform fmt
+          terraform plan
+        displayName: "Terraform Init, Validate, Fmt & Plan"
+        workingDirectory: 'terraf-infra'
+
+# ===============================
+# Stage 3: Manual Validation
+# ===============================
+- stage: ManualValidation
+  displayName: "Manual Approval Before Apply"
+  dependsOn: InitAndPlan
+  pool: server
+  jobs:
+  - job: ServerLessJobValidation
+    displayName: "Wait for Manual Approval"
+    steps:
+      - task: ManualValidation@1
+        inputs:
+          notifyUsers: 'avinash_kumar21@outlook.com'
+          instructions: 'Please review and approve before applying Terraform changes.'
+
+# ===============================
+# Stage 4: Final Stage Apply
+# ===============================
+- stage: FinalStageApply
+  displayName: "Terraform Apply to Azure"
+  dependsOn: ManualValidation
+  jobs:
+  - job: ApplyJob
+    displayName: "Apply Terraform Plan"
+    steps:
+      - task: TerraformTaskV2@2
+        inputs:
+          provider: 'azurerm'
+          command: 'init'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/terraf-infra'
+          backendServiceArm: 'armazureserviceconnection'
+      - task: TerraformTask@5
+        inputs:
+          provider: 'azurerm'
+          command: 'apply'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/terraf-infra'
+          commandOptions: '--auto-approve'
+          environmentServiceNameAzureRM: 'armazureserviceconnection'
