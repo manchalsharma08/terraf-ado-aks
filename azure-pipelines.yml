@@ -29,13 +29,18 @@ stages:
   - job: PlanForInitAndPlan
     displayName: "Run Terraform Commands"
     steps:
-      - script: |
-          terraform init
-          terraform validate
-          terraform fmt
-          terraform plan
-        displayName: "Terraform Init, Validate, Fmt & Plan"
-        workingDirectory: 'terraf-infra'
+     - task: TerraformTask@5
+       inputs:
+         provider: 'azurerm'
+         command: 'init'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/terraf-infra'
+         backendAzureRmUseEntraIdForAuthentication: false
+         backendServiceArm: 'armazureserviceconnection'
+         backendAzureRmOverrideSubscriptionID: 'a029ac91-4ead-438a-b2ee-394333e687e0'
+         backendAzureRmResourceGroupName: 'tera-rg'
+         backendAzureRmStorageAccountName: 'terastorage3567987'
+         backendAzureRmContainerName: 'teracon'
+         backendAzureRmKey: 'ram.terraform.tfstate'
 
 # ===============================
 # Stage 3: Manual Validation
