@@ -8,6 +8,12 @@ terraform {
       version = "4.47.0"
     }
   }
+  backend "azurerm" {
+    resource_group_name = "tera-rg"
+    storage_account_name = "terastorage3567987"
+    container_name = "teracon"
+    key = "ram.terraform.tfstate"
+  }
 }
 
 provider "azurerm" {
