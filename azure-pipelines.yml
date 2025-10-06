@@ -72,7 +72,7 @@ stages:
           backendAzureRmResourceGroupName: 'tera-rg'
           backendAzureRmStorageAccountName: 'terastorage3567987'
           backendAzureRmContainerName: 'teracon'
-          backendAzureRmKey: 'ram.terraform.tfsate'
+          backendAzureRmKey: 'ram.terraform.tfstate'
       - task: TerraformTask@5
         inputs:
           provider: 'azurerm'
