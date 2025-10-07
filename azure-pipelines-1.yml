@@ -1,0 +1,190 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool: default
+ 
+
+
+
+# ===================================
+# Global Variables
+# ===================================
+variables:
+  # Node.js app
+  appWorkingDir: 'app'
+  dockerImageName: 'myapp'
+  dockerRegistry: 'myacr.azurecr.io'
+  dockerTag: '$(Build.BuildId)'
+
+  # Kubernetes
+  kubernetesNamespace: 'default'
+  k8sManifestsDir: 'k8s-manifests'
+
+  # Terraform
+  terraformWorkingDir: 'terraf-infra'
+  azureServiceConnection: 'adkconnection'
+  terraformVersion: 'latest'
+
+  # Manual Approval
+  notifyEmail: 'avinash_kumar21@outlook.com'
+
+stages:
+# ===================================
+# Stage 1: Terraform Installation
+# ===================================
+- stage: TerraformInstall
+  displayName: "Install Terraform"
+  jobs:
+  - job: InstallTerraform
+    displayName: "Terraform Tool Installation"
+    steps:
+      - task: TerraformInstaller@1
+        inputs:
+          terraformVersion: '$(terraformVersion)'
+
+# ===================================
+# Stage 2: Terraform Init & Plan
+# ===================================
+- stage: TerraformPlan
+  displayName: "Terraform Init & Plan"
+  dependsOn: TerraformInstall
+  jobs:
+  - job: PlanJob
+    displayName: "Terraform Init, Validate, Plan"
+    steps:
+     - task: TerraformTask@5
+       inputs:
+         provider: 'azurerm'
+         command: 'init'
+         backendAzureRmUseEntraIdForAuthentication: false
+         backendServiceArm: 'adkconnection'
+         backendAzureRmOverrideSubscriptionID: 'a029ac91-4ead-438a-b2ee-394333e687e0'
+         backendAzureRmResourceGroupName: 'backenb-rg'
+         backendAzureRmStorageAccountName: 'backenb8786757579837'
+         backendAzureRmContainerName: 'backenbcon'
+         backendAzureRmKey: 'dev.terraform.tfstate'
+
+     - task: TerraformTask@5
+       inputs:
+         provider: 'azurerm'
+         command: 'plan'
+         environmentServiceNameAzureRM: 'adkconnection'
+         environmentAzureRmOverrideSubscriptionID: 'a029ac91-4ead-438a-b2ee-394333e687e0'
+
+# ===================================
+# Stage 3: Manual Approval
+# ===================================
+- stage: ManualApproval
+  displayName: "Manual Approval Before Apply"
+  dependsOn: TerraformPlan
+  pool: server
+  jobs:
+  - job: WaitApproval
+    displayName: "Wait for Approval"
+    steps:
+      - task: ManualValidation@1
+        inputs:
+          notifyUsers: '$(notifyEmail)'
+          instructions: 'Please review and approve before applying Terraform changes.'
+
+# ===================================
+# Stage 4: Terraform Apply
+# ===================================
+- stage: TerraformApply
+  displayName: "Apply Terraform"
+  dependsOn: ManualApproval
+  jobs:
+  - job: ApplyJob
+    displayName: "Terraform Apply to Azure"
+    steps:
+     - task: TerraformTask@5
+       inputs:
+         provider: 'azurerm'
+         command: 'init'
+         backendServiceArm: 'adkconnection'
+         backendAzureRmOverrideSubscriptionID: 'a029ac91-4ead-438a-b2ee-394333e687e0'
+         backendAzureRmResourceGroupName: 'backenb-rg'
+         backendAzureRmStorageAccountName: 'backenb8786757579837'
+         backendAzureRmContainerName: 'backenbcon'
+         backendAzureRmKey: 'dev.terraform.tfstate'
+     
+
+# ===================================
+# Stage 5: Node.js Build & Docker Push
+# ===================================
+- stage: BuildAndPushDocker
+  displayName: "Build Node.js App & Push Docker Image"
+  dependsOn: TerraformApply
+  jobs:
+  - job: NodeDocker
+    displayName: "Node.js & Docker"
+    steps:
+      - checkout: self
+
+      # Node.js setup
+      - task: NodeTool@0
+        inputs:
+          versionSpec: '18.x'
+        displayName: "Use Node.js 18"
+
+      # Install dependencies and generate package-lock.json
+      - script: |
+          cd $(appWorkingDir)
+          npm install
+        displayName: "Install Dependencies"
+
+      # Docker login to ACR
+      - task: Docker@2
+        displayName: "Login to ACR"
+        inputs:
+          command: login
+          containerRegistry: '$(azureServiceConnection)'
+
+      # Build Docker image
+      - task: Docker@2
+        displayName: "Build Docker Image"
+        inputs:
+          command: build
+          dockerfile: '$(appWorkingDir)/Dockerfile'
+          tags: |
+            $(dockerRegistry)/$(dockerImageName):$(dockerTag)
+
+      # Push Docker image
+      - task: Docker@2
+        displayName: "Push Docker Image"
+        inputs:
+          command: push
+          tags: |
+            $(dockerRegistry)/$(dockerImageName):$(dockerTag)
+
+# ===================================
+# Stage 6: Deploy to AKS
+# ===================================
+- stage: DeployToAKS
+  displayName: "Deploy Node.js App to AKS"
+  dependsOn: BuildAndPushDocker
+  jobs:
+  - job: K8sDeploy
+    displayName: "Kubernetes Deployment"
+    steps:
+      # Install kubectl
+      - task: KubectlInstaller@0
+        displayName: "Install kubectl"
+
+      # Get AKS credentials using Azure Service Connection
+      - task: AzureCLI@2
+        displayName: "Get AKS Credentials"
+        inputs:
+          azureSubscription: '$(azureServiceConnection)'
+          scriptType: 'bash'
+          scriptLocation: 'inlineScript'
+          inlineScript: |
+            az aks get-credentials --resource-group <RG_NAME> --name <AKS_NAME> --overwrite-existing
+
+      # Deploy manifests and set image
+      - script: |
+          kubectl apply -f $(k8sManifestsDir)
+          kubectl set image deployment/myapp-deployment myapp=$(dockerRegistry)/$(dockerImageName):$(dockerTag) -n $(kubernetesNamespace)
+        displayName: "Deploy App to AKS"
