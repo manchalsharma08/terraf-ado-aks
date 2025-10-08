@@ -60,6 +60,7 @@ stages:
        inputs:
          provider: 'azurerm'
          command: 'init'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/terraf-infra'
          backendAzureRmUseEntraIdForAuthentication: false
          backendServiceArm: 'adkconnection'
          backendAzureRmOverrideSubscriptionID: 'a029ac91-4ead-438a-b2ee-394333e687e0'
@@ -72,6 +73,7 @@ stages:
        inputs:
          provider: 'azurerm'
          command: 'plan'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/terraf-infra'
          environmentServiceNameAzureRM: 'adkconnection'
          environmentAzureRmOverrideSubscriptionID: 'a029ac91-4ead-438a-b2ee-394333e687e0'
 
@@ -105,12 +107,21 @@ stages:
        inputs:
          provider: 'azurerm'
          command: 'init'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/terraf-infra'
          backendServiceArm: 'adkconnection'
          backendAzureRmOverrideSubscriptionID: 'a029ac91-4ead-438a-b2ee-394333e687e0'
          backendAzureRmResourceGroupName: 'backenb-rg'
          backendAzureRmStorageAccountName: 'backenb8786757579837'
          backendAzureRmContainerName: 'backenbcon'
          backendAzureRmKey: 'dev.terraform.tfstate'
+     - task: TerraformTask@5
+       inputs:
+         provider: 'azurerm'
+         command: 'apply'
+         workingDirectory: '$(System.DefaultWorkingDirectory)/terraf-infra'
+         commandOptions: '--auto-approve'
+         environmentServiceNameAzureRM: 'adkconnection'
+         environmentAzureRmOverrideSubscriptionID: 'a029ac91-4ead-438a-b2ee-394333e687e0'
      
 
 # ===================================
