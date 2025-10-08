@@ -186,7 +186,20 @@ stages:
           scriptType: 'bash'
           scriptLocation: 'inlineScript'
           inlineScript: |
-            az aks get-credentials --resource-group <RG_NAME> --name <AKS_NAME> --overwrite-existing
+              
+              echo "Fetching AKS cluster details..."
+              # Resource Group extract करें
+              RESOURCE_GROUP=$(az aks list --query '[0].resourceGroup' -o tsv)
+              echo "##vso[task.setvariable variable=resourceGroupName;isoutput=true]$RESOURCE_GROUP"
+                            
+              # AKS Name extract करें  
+              AKS_NAME=$(az aks list --query '[0].name' -o tsv)
+              echo "##vso[task.setvariable variable=aksClusterName;isoutput=true]$AKS_NAME"
+                            
+              echo "Resource Group: $RESOURCE_GROUP"
+              echo "AKS Cluster: $AKS_NAME"
+              az aks get-credentials --resource-group $(RESOURCE_GROUP) --name $(AKS_NAME) --overwrite-existing
+           
 
       # Deploy manifests and set image
       - script: |
