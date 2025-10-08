@@ -74,6 +74,7 @@ stages:
          provider: 'azurerm'
          command: 'plan'
          workingDirectory: '$(System.DefaultWorkingDirectory)/terraf-infra'
+         commandOptions: '-lock=false'
          environmentServiceNameAzureRM: 'adkconnection'
          environmentAzureRmOverrideSubscriptionID: 'a029ac91-4ead-438a-b2ee-394333e687e0'
 
@@ -119,7 +120,7 @@ stages:
          provider: 'azurerm'
          command: 'apply'
          workingDirectory: '$(System.DefaultWorkingDirectory)/terraf-infra'
-         commandOptions: '--auto-approve'
+         commandOptions: '--auto-approve -lock=false'
          environmentServiceNameAzureRM: 'adkconnection'
          environmentAzureRmOverrideSubscriptionID: 'a029ac91-4ead-438a-b2ee-394333e687e0'
      
