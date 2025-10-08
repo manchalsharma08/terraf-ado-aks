@@ -15,7 +15,7 @@ variables:
   # Node.js app
   appWorkingDir: 'app'
   dockerImageName: 'myapp'
-  dockerRegistry: 'myacr.azurecr.io'
+  dockerRegistry: 'abhiacrxqxrr9.azurecr.io'
   dockerTag: '$(Build.BuildId)'
 
   # Kubernetes
@@ -136,7 +136,10 @@ stages:
         displayName: "Install Dependencies"
 
       # Docker login to ACR
-    
+      - task: Docker@2
+        inputs:
+          containerRegistry: 'azureacrconnection'
+          command: 'login'
 
       # Build Docker image
       - task: Docker@2
