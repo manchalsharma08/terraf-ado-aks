@@ -160,7 +160,9 @@ stages:
           command: 'buildAndPush'
           Dockerfile: '$(dockerfilePath)'
           buildContext: '$(appWorkingDir)'
-          tags: '$(dockerTag)'
+          tags: |
+            $(dockerTag)
+            latest
 
 # ===================================
 # Stage 6: Deploy to AKS
