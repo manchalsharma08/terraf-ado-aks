@@ -16,7 +16,9 @@ variables:
   appWorkingDir: 'app'
   dockerImageName: 'myapp'
   dockerRegistry: 'abhiacrxqxrr9.azurecr.io'
+  dockerfilePath: 'app/Dockerfile'
   dockerTag: '$(Build.BuildId)'
+  dockeracrserviceconnection: 'azureacrconnection'
 
   # Kubernetes
   kubernetesNamespace: 'default'
@@ -138,25 +140,16 @@ stages:
       # Docker login to ACR
       - task: Docker@2
         inputs:
-          containerRegistry: 'azureacrconnection'
+          containerRegistry: $(dockeracrserviceconnection)
           command: 'login'
-
-      # Build Docker image
       - task: Docker@2
-        displayName: "Build Docker Image"
         inputs:
-          command: build
-          dockerfile: '$(appWorkingDir)/Dockerfile'
-          tags: |
-            $(dockerRegistry)/$(dockerImageName):$(dockerTag)
-
-      # Push Docker image
-      - task: Docker@2
-        displayName: "Push Docker Image"
-        inputs:
-          command: push
-          tags: |
-            $(dockerRegistry)/$(dockerImageName):$(dockerTag)
+          containerRegistry: '$(dockeracrserviceconnection)'
+          repository: '$(dockerImageName)'
+          command: 'buildAndPush'
+          Dockerfile: '$(dockerfilePath)'
+          buildContext: '$(appWorkingDir)'
+          tags: '$(dockerTag)'
 
 # ===================================
 # Stage 6: Deploy to AKS
